@@ -4,154 +4,103 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmartFace Attendance</title>
-    <!-- Tailwind CSS for beautiful UI -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome for Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/dist/face-api.js"></script>
     <style>
         .glass-panel {
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.92);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
         }
         body {
-            background-color: #f3f4f6;
-            background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
-            background-size: 20px 20px;
+            background: radial-gradient(circle at 20% 20%, #dbeafe 0%, #f8fafc 45%, #e2e8f0 100%);
         }
     </style>
 </head>
 <body class="min-h-screen font-sans text-gray-800">
-
-    <!-- Navbar -->
-    <nav class="bg-indigo-600 text-white shadow-lg">
+    <nav class="bg-sky-700 text-white shadow-lg">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center space-x-3">
                     <i class="fas fa-camera-retro text-2xl"></i>
                     <span class="font-bold text-xl tracking-wide">SmartFace Attendance</span>
                 </div>
-                <div class="hidden md:flex items-center gap-2">
-                    <label for="apiBaseInput" class="text-xs text-indigo-100">Backend URL</label>
-                    <input id="apiBaseInput" type="text" placeholder="http://localhost:8006"
-                        class="h-9 w-64 px-2 rounded-md text-gray-900 text-sm border border-indigo-300">
-                    <button id="btnSaveApiBase" class="h-9 px-3 rounded-md bg-white text-indigo-700 text-sm font-semibold">Save</button>
-                </div>
+                <div id="modelStatus" class="text-sm bg-sky-900/60 px-3 py-1 rounded-full">Loading AI models...</div>
             </div>
         </div>
     </nav>
 
-    <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            <!-- Left Column: Controls & Actions -->
             <div class="space-y-6">
-                
-                <!-- Register New Student -->
                 <div class="glass-panel rounded-2xl p-6">
-                    <h2 class="text-xl font-bold mb-4 flex items-center text-indigo-700">
+                    <h2 class="text-xl font-bold mb-4 flex items-center text-sky-700">
                         <i class="fas fa-user-plus mr-2"></i> Register Student
                     </h2>
                     <div id="registerStatus" class="hidden mb-3 text-sm rounded-md px-3 py-2"></div>
                     <form id="registerForm" class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Student Name</label>
-                            <input type="text" id="studentName" required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border" 
-                                placeholder="e.g. John Doe">
+                            <input type="text" id="studentName" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" placeholder="e.g. John Doe">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Group</label>
-                            <input type="text" id="studentGroup"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border"
-                                placeholder="e.g. G1">
+                            <input type="text" id="studentGroup" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" placeholder="e.g. G1">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Upload Photo (Optional)</label>
-                            <input type="file" id="studentPhoto" accept="image/*"
-                                class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                            <label class="block text-sm font-medium text-gray-700">Upload Photo</label>
+                            <input type="file" id="studentPhoto" accept="image/*" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100">
                         </div>
-                        <p class="text-xs text-gray-500">Use either photo upload or Capture 8 Photos.</p>
+                        <p class="text-xs text-gray-500">You can upload one image or capture 8 photos from camera.</p>
                         <div class="flex space-x-2">
-                            <button type="button" id="btnCaptureRegister" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200">
-                                Capture 8 Photos
-                            </button>
-                            <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition duration-200">
-                                Register
-                            </button>
+                            <button type="button" id="btnCaptureRegister" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Capture 8 Photos</button>
+                            <button type="submit" class="flex-1 bg-sky-700 hover:bg-sky-800 text-white font-bold py-2 px-4 rounded">Register</button>
                         </div>
                     </form>
                 </div>
 
-                <!-- Classroom photo upload -->
                 <div class="glass-panel rounded-2xl p-6">
-                    <h2 class="text-xl font-bold mb-4 flex items-center text-green-700">
+                    <h2 class="text-xl font-bold mb-4 flex items-center text-emerald-700">
                         <i class="fas fa-users mr-2"></i> Group Attendance
                     </h2>
                     <div id="groupStatus" class="hidden mb-3 text-sm rounded-md px-3 py-2"></div>
-                    <p class="text-sm text-gray-600 mb-4">Upload a classroom photo to mark attendance for everyone in the frame.</p>
                     <form id="groupPhotoForm" class="space-y-4">
-                        <input type="text" id="groupScopeName" placeholder="Group for this photo (optional, e.g. G1)"
-                            class="block w-full rounded-md border-gray-300 shadow-sm p-2 border">
-                        <input type="file" id="groupPhoto" accept="image/*" required
-                            class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100">
-                        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-200">
-                            Process Classroom Photo
-                        </button>
+                        <input type="text" id="groupScopeName" placeholder="Group for this photo (optional, e.g. G1)" class="block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                        <input type="file" id="groupPhoto" accept="image/*" required class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100">
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded">Process Classroom Photo</button>
                     </form>
                     <img id="processedPreview" class="mt-4 rounded-lg border border-gray-200 hidden" alt="Processed attendance preview" />
                 </div>
-
             </div>
 
-            <!-- Middle/Right Column: Live Feed & Results -->
             <div class="lg:col-span-2 space-y-6">
-                
-                <!-- Video Feed Player Workspace -->
                 <div class="glass-panel rounded-2xl p-6 flex flex-col items-center justify-center min-h-[400px] relative overflow-hidden bg-black">
                     <h2 class="absolute top-4 left-6 text-xl font-bold text-white z-10 flex items-center drop-shadow-md">
                         <i class="fas fa-video mr-2 text-red-500"></i> Live Scanner
                     </h2>
-                    <div id="cameraStatus" class="hidden absolute top-14 left-6 right-6 text-sm rounded-md px-3 py-2 bg-red-50 text-red-700 z-10"></div>
-                    
-                    <video id="browserVideo" autoplay muted playsinline class="max-h-[400px] w-full object-contain hidden border-2 border-indigo-500 rounded-lg"></video>
-                    <img id="videoFeed" src="" alt="Webcam Feed Will Appear Here" class="max-h-[400px] w-full object-contain hidden border-2 border-indigo-500 rounded-lg">
+                    <div id="cameraStatus" class="hidden absolute top-14 left-6 right-6 text-sm rounded-md px-3 py-2 z-10"></div>
+                    <video id="browserVideo" autoplay muted playsinline class="max-h-[400px] w-full object-contain hidden border-2 border-sky-500 rounded-lg"></video>
                     <canvas id="frameCanvas" class="hidden"></canvas>
-                    
                     <div id="videoPlaceholder" class="text-center text-gray-400">
                         <i class="fas fa-eye-slash text-6xl mb-4"></i>
                         <p>Camera is currently offline</p>
                     </div>
-
                     <div class="absolute bottom-4 flex space-x-4 z-10">
-                        <button id="btnStartCamera" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-full shadow-lg transition duration-200">
-                            Start Scanner
-                        </button>
-                        <button id="btnStopCamera" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-full shadow-lg transition duration-200 hidden">
-                            Stop Scanner
-                        </button>
+                        <button id="btnStartCamera" class="bg-sky-700 hover:bg-sky-800 text-white font-bold py-2 px-6 rounded-full shadow-lg">Start Scanner</button>
+                        <button id="btnStopCamera" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-full shadow-lg hidden">Stop Scanner</button>
                     </div>
                 </div>
 
-                <!-- Today's Attendance Log -->
                 <div class="glass-panel rounded-2xl p-6">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-xl font-bold flex items-center text-gray-800">
-                            <i class="fas fa-clipboard-list mr-2 text-indigo-600"></i> Today's Attendance
+                            <i class="fas fa-clipboard-list mr-2 text-sky-700"></i> Today's Attendance
                         </h2>
-                        <button id="btnRefreshLog" class="text-indigo-600 hover:text-indigo-800">
-                            <i class="fas fa-sync-alt"></i> Refresh
-                        </button>
+                        <button id="btnRefreshLog" class="text-sky-700 hover:text-sky-900"><i class="fas fa-sync-alt"></i> Refresh</button>
                     </div>
-                    <div class="grid grid-cols-2 gap-2 mb-4">
-                        <input type="text" id="filterGroup" placeholder="Filter by group"
-                            class="block w-full rounded-md border-gray-300 shadow-sm p-2 border">
-                        <div></div>
-                    </div>
-                    
+                    <input type="text" id="filterGroup" placeholder="Filter by group" class="block w-full rounded-md border-gray-300 shadow-sm p-2 border mb-4">
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
@@ -163,10 +112,7 @@
                                 </tr>
                             </thead>
                             <tbody id="attendanceTableBody" class="bg-white divide-y divide-gray-200">
-                                <!-- Data rows go here -->
-                                <tr>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" colspan="4">No records yet for today.</td>
-                                </tr>
+                                <tr><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" colspan="4">No records yet for today.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -176,10 +122,13 @@
     </main>
 
     <script>
-        // UI Logic setup
+        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+        const STUDENTS_KEY = 'smartface_students_v2';
+        const ATT_PREFIX = 'smartface_attendance_';
+        const FACE_THRESHOLD = 0.52;
+
         const btnStartCamera = document.getElementById('btnStartCamera');
         const btnStopCamera = document.getElementById('btnStopCamera');
-        const videoFeed = document.getElementById('videoFeed');
         const browserVideo = document.getElementById('browserVideo');
         const frameCanvas = document.getElementById('frameCanvas');
         const placeholder = document.getElementById('videoPlaceholder');
@@ -193,140 +142,200 @@
         const btnCaptureRegister = document.getElementById('btnCaptureRegister');
         const cameraStatus = document.getElementById('cameraStatus');
         const filterGroup = document.getElementById('filterGroup');
-        const apiBaseInput = document.getElementById('apiBaseInput');
-        const btnSaveApiBase = document.getElementById('btnSaveApiBase');
-        let capturedStudentName = null;
+        const modelStatus = document.getElementById('modelStatus');
+
         let browserStream = null;
         let scannerTimer = null;
-        const isGitHubPages = window.location.hostname.includes('github.io');
-        const defaultApiBase = window.location.hostname.includes('github.io') ? 'http://localhost:8006' : '';
-        let apiBase = localStorage.getItem('smartface_api_base') || defaultApiBase;
+        let modelsReady = false;
 
-        function apiUrl(path) {
-            if (!apiBase) {
-                return path;
-            }
-            const base = apiBase.endsWith('/') ? apiBase.slice(0, -1) : apiBase;
-            return `${base}${path}`;
+        function showStatus(el, message, success = true) {
+            el.textContent = message;
+            el.classList.remove('hidden', 'bg-red-50', 'text-red-700', 'bg-green-50', 'text-green-700');
+            el.classList.add(success ? 'bg-green-50' : 'bg-red-50', success ? 'text-green-700' : 'text-red-700');
         }
 
-        function initApiBaseUi() {
-            apiBaseInput.value = apiBase;
+        function todayKey() {
+            return ATT_PREFIX + new Date().toISOString().slice(0, 10);
+        }
+
+        function getStudents() {
+            const data = localStorage.getItem(STUDENTS_KEY);
+            return data ? JSON.parse(data) : [];
+        }
+
+        function saveStudents(students) {
+            localStorage.setItem(STUDENTS_KEY, JSON.stringify(students));
+        }
+
+        function getAttendance() {
+            const data = localStorage.getItem(todayKey());
+            return data ? JSON.parse(data) : [];
+        }
+
+        function saveAttendance(records) {
+            localStorage.setItem(todayKey(), JSON.stringify(records));
+        }
+
+        function markAttendance(name, group) {
+            const records = getAttendance();
+            const exists = records.some((r) => r.Name === name && (r.Group || '') === (group || ''));
+            if (!exists) {
+                records.push({ Name: name, Group: group || '', Time: new Date().toLocaleTimeString() });
+                saveAttendance(records);
+            }
+        }
+
+        function renderAttendance() {
+            const group = filterGroup.value.trim().toLowerCase();
+            let records = getAttendance();
+            if (group) records = records.filter((r) => (r.Group || '').toLowerCase() === group);
+
+            if (!records.length) {
+                attendanceTableBody.innerHTML = '<tr><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" colspan="4">No records yet for today.</td></tr>';
+                return;
+            }
+
+            attendanceTableBody.innerHTML = records.map((record) => `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${record.Name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${record.Group || ''}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${record.Time}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Present</span></td>
+                </tr>
+            `).join('');
+        }
+
+        function euclidean(a, b) {
+            let sum = 0;
+            for (let i = 0; i < a.length; i += 1) {
+                const d = a[i] - b[i];
+                sum += d * d;
+            }
+            return Math.sqrt(sum);
+        }
+
+        function matchDescriptor(descriptor, groupFilter = '') {
+            const students = getStudents();
+            let best = { name: 'Unknown', group: '', distance: 999 };
+            const normalizedFilter = groupFilter.trim().toLowerCase();
+
+            students.forEach((student) => {
+                if (normalizedFilter && (student.group || '').toLowerCase() !== normalizedFilter) return;
+                (student.descriptors || []).forEach((desc) => {
+                    const distance = euclidean(descriptor, desc);
+                    if (distance < best.distance) {
+                        best = { name: student.name, group: student.group || '', distance };
+                    }
+                });
+            });
+
+            if (best.distance <= FACE_THRESHOLD) return best;
+            return { name: 'Unknown', group: '', distance: best.distance };
+        }
+
+        async function loadModels() {
+            await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+            await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+            await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+            modelsReady = true;
+            modelStatus.textContent = 'AI ready (Frontend only)';
+        }
+
+        async function ensureCamera() {
+            if (browserStream) return;
+            browserStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            browserVideo.srcObject = browserStream;
+            await browserVideo.play();
+        }
+
+        function stopCamera() {
+            if (scannerTimer) {
+                clearInterval(scannerTimer);
+                scannerTimer = null;
+            }
+            if (browserStream) {
+                browserStream.getTracks().forEach((t) => t.stop());
+                browserStream = null;
+            }
+            browserVideo.srcObject = null;
         }
 
         function sleep(ms) {
             return new Promise((resolve) => setTimeout(resolve, ms));
         }
 
-        async function ensureBrowserCamera() {
-            if (browserStream) {
-                return browserStream;
-            }
-            browserStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-            browserVideo.srcObject = browserStream;
-            await browserVideo.play();
-            return browserStream;
+        async function descriptorFromImageElement(imageEl) {
+            const detection = await faceapi
+                .detectSingleFace(imageEl, new faceapi.TinyFaceDetectorOptions())
+                .withFaceLandmarks()
+                .withFaceDescriptor();
+            if (!detection) return null;
+            return Array.from(detection.descriptor);
         }
 
-        function stopBrowserCamera() {
-            if (scannerTimer) {
-                clearInterval(scannerTimer);
-                scannerTimer = null;
-            }
-            if (browserStream) {
-                browserStream.getTracks().forEach((track) => track.stop());
-                browserStream = null;
-            }
-            browserVideo.srcObject = null;
+        async function descriptorFromVideo() {
+            const detection = await faceapi
+                .detectSingleFace(browserVideo, new faceapi.TinyFaceDetectorOptions())
+                .withFaceLandmarks()
+                .withFaceDescriptor();
+            if (!detection) return null;
+            return Array.from(detection.descriptor);
         }
 
-        async function captureFrameBlob() {
-            const width = browserVideo.videoWidth || 640;
-            const height = browserVideo.videoHeight || 480;
-            frameCanvas.width = width;
-            frameCanvas.height = height;
-            const ctx = frameCanvas.getContext('2d');
-            ctx.drawImage(browserVideo, 0, 0, width, height);
-            return new Promise((resolve) => frameCanvas.toBlob(resolve, 'image/jpeg', 0.9));
+        async function processLiveFrame() {
+            const detections = await faceapi
+                .detectAllFaces(browserVideo, new faceapi.TinyFaceDetectorOptions())
+                .withFaceLandmarks()
+                .withFaceDescriptors();
+
+            const recognized = [];
+            for (const det of detections) {
+                const match = matchDescriptor(Array.from(det.descriptor), filterGroup.value.trim());
+                if (match.name !== 'Unknown') {
+                    markAttendance(match.name, match.group);
+                    recognized.push(match.name);
+                }
+            }
+            renderAttendance();
+            showStatus(cameraStatus, `Live recognized: ${recognized.length ? recognized.join(', ') : 'None'}`, true);
         }
 
-        async function recognizeCurrentFrame() {
-            const blob = await captureFrameBlob();
-            if (!blob) {
-                return;
-            }
-            const formData = new FormData();
-            formData.append('file', blob, 'frame.jpg');
-            const groupName = filterGroup.value.trim();
-            formData.append('group_name', groupName);
-            const response = await fetch(apiUrl('/recognize_frame'), { method: 'POST', body: formData });
-            const data = await response.json();
-            if (!response.ok) {
-                throw new Error(data.detail || 'Frame recognition failed');
-            }
-            const recognizedText = data.recognized && data.recognized.length ? data.recognized.join(', ') : 'None';
-            showStatus(cameraStatus, `Live recognized: ${recognizedText}`, true);
-            await loadAttendance();
-        }
-
-        function showStatus(el, message, success = true) {
-            el.textContent = message;
-            el.classList.remove('hidden', 'bg-red-50', 'text-red-700', 'bg-green-50', 'text-green-700');
-            if (success) {
-                el.classList.add('bg-green-50', 'text-green-700');
+        function addStudentSamples(name, group, descriptors) {
+            const students = getStudents();
+            const existing = students.find((s) => s.name.toLowerCase() === name.toLowerCase() && (s.group || '').toLowerCase() === (group || '').toLowerCase());
+            if (existing) {
+                existing.descriptors = (existing.descriptors || []).concat(descriptors);
             } else {
-                el.classList.add('bg-red-50', 'text-red-700');
+                students.push({ name, group, descriptors: descriptors.slice() });
             }
+            saveStudents(students);
         }
 
         btnStartCamera.addEventListener('click', async () => {
-            cameraStatus.classList.add('hidden');
+            if (!modelsReady) {
+                showStatus(cameraStatus, 'Models are still loading, please wait...', false);
+                return;
+            }
             try {
-                if (isGitHubPages) {
-                    await ensureBrowserCamera();
-                    browserVideo.classList.remove('hidden');
-                    videoFeed.classList.add('hidden');
-                    scannerTimer = setInterval(async () => {
-                        try {
-                            await recognizeCurrentFrame();
-                        } catch (err) {
-                            showStatus(cameraStatus, err.message || 'Live recognition failed', false);
-                        }
-                    }, 1800);
-                } else {
-                    const group = encodeURIComponent(filterGroup.value.trim());
-                    videoFeed.src = group ? apiUrl(`/video_feed?group_name=${group}`) : apiUrl('/video_feed');
-                    videoFeed.classList.remove('hidden');
-                    browserVideo.classList.add('hidden');
-                }
-
+                await ensureCamera();
+                browserVideo.classList.remove('hidden');
                 placeholder.classList.add('hidden');
                 btnStartCamera.classList.add('hidden');
                 btnStopCamera.classList.remove('hidden');
-            } catch (error) {
-                showStatus(cameraStatus, error.message || 'Cannot access camera', false);
+                scannerTimer = setInterval(async () => {
+                    try {
+                        await processLiveFrame();
+                    } catch (err) {
+                        showStatus(cameraStatus, err.message || 'Live scan failed', false);
+                    }
+                }, 1600);
+            } catch (err) {
+                showStatus(cameraStatus, err.message || 'Cannot access camera', false);
             }
         });
 
-        videoFeed.addEventListener('error', () => {
-            cameraStatus.textContent = 'Cannot access webcam stream. Close other camera apps and try again.';
-            cameraStatus.classList.remove('hidden');
-            videoFeed.src = '';
-            videoFeed.classList.add('hidden');
-            placeholder.classList.remove('hidden');
-            btnStartCamera.classList.remove('hidden');
-            btnStopCamera.classList.add('hidden');
-        });
-
-        btnStopCamera.addEventListener('click', async () => {
-            try {
-                await fetch(apiUrl('/stop_camera'), { method: 'POST' });
-            } catch (e) {
-                // ignore network cleanup errors
-            }
-            stopBrowserCamera();
-            videoFeed.src = ""; // Stop stream
-            videoFeed.classList.add('hidden');
+        btnStopCamera.addEventListener('click', () => {
+            stopCamera();
             browserVideo.classList.add('hidden');
             placeholder.classList.remove('hidden');
             btnStartCamera.classList.remove('hidden');
@@ -335,183 +344,137 @@
 
         registerForm.addEventListener('submit', async (event) => {
             event.preventDefault();
+            if (!modelsReady) return;
             const name = document.getElementById('studentName').value.trim();
-            const groupName = document.getElementById('studentGroup').value.trim();
-            const fileInput = document.getElementById('studentPhoto');
+            const group = document.getElementById('studentGroup').value.trim();
+            const file = document.getElementById('studentPhoto').files[0];
 
-            if (!name) {
-                showStatus(registerStatus, 'Please enter student name.', false);
-                return;
-            }
-            if (!fileInput.files.length) {
-                if (capturedStudentName && capturedStudentName.toLowerCase() === name.toLowerCase()) {
-                    showStatus(registerStatus, `Already captured 8 photos for ${name}. No upload needed.`, true);
-                    return;
-                }
-                showStatus(registerStatus, 'Please upload a photo or click Capture 8 Photos.', false);
+            if (!name || !file) {
+                showStatus(registerStatus, 'Enter name and upload a photo.', false);
                 return;
             }
 
-            const formData = new FormData();
-            formData.append('name', name);
-            formData.append('group_name', groupName);
-            formData.append('file', fileInput.files[0]);
+            const img = new Image();
+            img.src = URL.createObjectURL(file);
+            await img.decode();
+            const descriptor = await descriptorFromImageElement(img);
+            URL.revokeObjectURL(img.src);
 
-            try {
-                const response = await fetch(apiUrl('/register'), { method: 'POST', body: formData });
-                const data = await response.json();
-                if (!response.ok) {
-                    throw new Error(data.detail || data.error || 'Registration failed');
-                }
-                showStatus(registerStatus, data.message || 'Student registered successfully.', true);
-                capturedStudentName = name;
-                registerForm.reset();
-                await loadAttendance();
-            } catch (error) {
-                showStatus(registerStatus, error.message, false);
+            if (!descriptor) {
+                showStatus(registerStatus, 'No face detected in uploaded photo.', false);
+                return;
             }
+
+            addStudentSamples(name, group, [descriptor]);
+            showStatus(registerStatus, `Registered ${name} successfully.`, true);
         });
 
         btnCaptureRegister.addEventListener('click', async () => {
+            if (!modelsReady) return;
             const name = document.getElementById('studentName').value.trim();
-            const groupName = document.getElementById('studentGroup').value.trim();
+            const group = document.getElementById('studentGroup').value.trim();
             if (!name) {
                 showStatus(registerStatus, 'Please enter student name.', false);
                 return;
             }
 
             try {
-                if (isGitHubPages) {
-                    showStatus(registerStatus, 'Using browser camera to capture 8 photos...', true);
-                    await ensureBrowserCamera();
-                    browserVideo.classList.remove('hidden');
-                    placeholder.classList.add('hidden');
+                await ensureCamera();
+                browserVideo.classList.remove('hidden');
+                placeholder.classList.add('hidden');
 
-                    let success = 0;
-                    let attempts = 0;
-                    while (success < 8 && attempts < 24) {
-                        attempts += 1;
-                        const blob = await captureFrameBlob();
-                        if (!blob) {
-                            await sleep(350);
-                            continue;
-                        }
-                        const formData = new FormData();
-                        formData.append('name', name);
-                        formData.append('group_name', groupName);
-                        formData.append('file', blob, `capture_${attempts}.jpg`);
-                        const response = await fetch(apiUrl('/register'), { method: 'POST', body: formData });
-                        if (response.ok) {
-                            success += 1;
-                            showStatus(registerStatus, `Captured ${success}/8 photos...`, true);
-                        }
-                        await sleep(400);
+                const descriptors = [];
+                let attempts = 0;
+                while (descriptors.length < 8 && attempts < 28) {
+                    attempts += 1;
+                    const descriptor = await descriptorFromVideo();
+                    if (descriptor) {
+                        descriptors.push(descriptor);
+                        showStatus(registerStatus, `Captured ${descriptors.length}/8 photos...`, true);
                     }
-                    if (success < 7) {
-                        throw new Error(`Captured only ${success} valid photos. Keep face clear and retry.`);
-                    }
-                    showStatus(registerStatus, `Successfully registered ${name} with ${success} photos.`, true);
-                    capturedStudentName = name;
-                } else {
-                    showStatus(registerStatus, 'Capturing 8 photos from webcam. Keep your face in frame...', true);
-                    const formData = new FormData();
-                    formData.append('name', name);
-                    formData.append('group_name', groupName);
-                    formData.append('shots', '8');
-                    const response = await fetch(apiUrl('/register_capture'), { method: 'POST', body: formData });
-                    const data = await response.json();
-                    if (!response.ok) {
-                        throw new Error(data.detail || 'Webcam registration failed');
-                    }
-                    showStatus(registerStatus, data.message || 'Webcam registration complete.', true);
-                    capturedStudentName = name;
+                    await sleep(350);
                 }
-                await loadAttendance();
-            } catch (error) {
-                showStatus(registerStatus, error.message, false);
+
+                if (descriptors.length < 7) {
+                    showStatus(registerStatus, `Only ${descriptors.length} valid captures found. Try again in better light.`, false);
+                    return;
+                }
+
+                addStudentSamples(name, group, descriptors);
+                showStatus(registerStatus, `Registered ${name} with ${descriptors.length} photos.`, true);
+            } catch (err) {
+                showStatus(registerStatus, err.message || 'Webcam capture failed', false);
             }
         });
 
         groupPhotoForm.addEventListener('submit', async (event) => {
             event.preventDefault();
-            const fileInput = document.getElementById('groupPhoto');
-            const groupName = document.getElementById('groupScopeName').value.trim();
-            if (!fileInput.files.length) {
-                showStatus(groupStatus, 'Please upload a classroom photo.', false);
+            if (!modelsReady) return;
+            const file = document.getElementById('groupPhoto').files[0];
+            const groupFilter = document.getElementById('groupScopeName').value.trim();
+            if (!file) {
+                showStatus(groupStatus, 'Please upload classroom photo.', false);
                 return;
             }
 
-            const formData = new FormData();
-            formData.append('group_name', groupName);
-            formData.append('file', fileInput.files[0]);
+            const img = new Image();
+            img.src = URL.createObjectURL(file);
+            await img.decode();
 
-            try {
-                const response = await fetch(apiUrl('/group_attendance'), { method: 'POST', body: formData });
-                const data = await response.json();
-                if (!response.ok) {
-                    throw new Error(data.detail || 'Group attendance failed');
+            const detections = await faceapi
+                .detectAllFaces(img, new faceapi.TinyFaceDetectorOptions())
+                .withFaceLandmarks()
+                .withFaceDescriptors();
+
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+
+            const recognized = [];
+            let unknown = 0;
+
+            detections.forEach((det) => {
+                const box = det.detection.box;
+                const match = matchDescriptor(Array.from(det.descriptor), groupFilter);
+                const isKnown = match.name !== 'Unknown';
+                if (isKnown) {
+                    markAttendance(match.name, match.group);
+                    recognized.push(match.name);
+                } else {
+                    unknown += 1;
                 }
 
-                const recognizedNames = data.recognized?.length ? data.recognized.join(', ') : 'None';
-                showStatus(groupStatus, `Processed. Recognized: ${recognizedNames}. Unknown: ${data.unknown_count ?? 0}.`, true);
+                ctx.strokeStyle = isKnown ? '#16a34a' : '#dc2626';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(box.x, box.y, box.width, box.height);
+                ctx.fillStyle = isKnown ? '#16a34a' : '#dc2626';
+                ctx.fillRect(box.x, box.y + box.height - 24, box.width, 24);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '14px sans-serif';
+                ctx.fillText(isKnown ? match.name : 'Unknown', box.x + 6, box.y + box.height - 7);
+            });
 
-                if (data.processed_image_url) {
-                    processedPreview.src = apiUrl(data.processed_image_url) + `?t=${Date.now()}`;
-                    processedPreview.classList.remove('hidden');
-                }
-
-                await loadAttendance();
-            } catch (error) {
-                showStatus(groupStatus, error.message, false);
-            }
+            processedPreview.src = canvas.toDataURL('image/jpeg', 0.92);
+            processedPreview.classList.remove('hidden');
+            showStatus(groupStatus, `Processed. Recognized: ${recognized.length ? [...new Set(recognized)].join(', ') : 'None'}. Unknown: ${unknown}.`, true);
+            renderAttendance();
+            URL.revokeObjectURL(img.src);
         });
 
-        async function loadAttendance() {
+        btnRefreshLog.addEventListener('click', renderAttendance);
+        filterGroup.addEventListener('input', renderAttendance);
+
+        (async () => {
             try {
-                const groupName = filterGroup.value.trim();
-                const qs = new URLSearchParams();
-                if (groupName) qs.set('group_name', groupName);
-                const response = await fetch(apiUrl(`/attendance/today?${qs.toString()}`));
-                const data = await response.json();
-                const records = data.records || [];
-
-                if (records.length === 0) {
-                    attendanceTableBody.innerHTML = `
-                        <tr>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" colspan="4">No records yet for today.</td>
-                        </tr>
-                    `;
-                    return;
-                }
-
-                attendanceTableBody.innerHTML = records.map((record) => `
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${record.Name}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${record.Group || ''}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${record.Time}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Present</span>
-                        </td>
-                    </tr>
-                `).join('');
-            } catch (error) {
-                attendanceTableBody.innerHTML = `
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600" colspan="4">Failed to load attendance log.</td>
-                    </tr>
-                `;
+                await loadModels();
+            } catch (err) {
+                modelStatus.textContent = 'Model load failed';
+                showStatus(cameraStatus, 'Failed to load AI models. Check internet connection.', false);
             }
-        }
-
-        btnRefreshLog.addEventListener('click', loadAttendance);
-        filterGroup.addEventListener('change', loadAttendance);
-        btnSaveApiBase.addEventListener('click', () => {
-            apiBase = apiBaseInput.value.trim();
-            localStorage.setItem('smartface_api_base', apiBase);
-            showStatus(registerStatus, `Backend URL saved: ${apiBase || 'same origin'}`, true);
-        });
-        initApiBaseUi();
-        loadAttendance();
+            renderAttendance();
+        })();
     </script>
 </body>
 </html>
