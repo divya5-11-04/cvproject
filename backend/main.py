@@ -564,6 +564,56 @@ async def group_attendance(file: UploadFile = File(...), group_name: str = Form(
         "processed_image_url": f"/processed/{out_name}",
     }
 
+
+@app.post("/recognize_frame")
+async def recognize_frame(file: UploadFile = File(...), group_name: str = Form("")):
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Image file is required")
+
+    np_arr = np.frombuffer(content, np.uint8)
+    frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+    if frame is None:
+        raise HTTPException(status_code=400, detail="Invalid image file")
+
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    face_locations = face_recognition.face_locations(rgb_frame)
+    face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
+
+    recognized = []
+    unknown_count = 0
+    detections = []
+
+    for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
+        name, best_distance = match_face_encoding(face_encoding, group_name=group_name)
+        if name != "Unknown":
+            meta = get_student_meta(name)
+            mark_attendance(name, group_name=meta.get("group_name", ""))
+            recognized.append(name)
+
+            face_crop = frame[max(top, 0):bottom, max(left, 0):right]
+            if face_crop.size > 0:
+                maybe_auto_update_student(name, face_encoding, face_crop, best_distance)
+        else:
+            unknown_count += 1
+
+        detections.append(
+            {
+                "name": name,
+                "top": int(top),
+                "right": int(right),
+                "bottom": int(bottom),
+                "left": int(left),
+                "distance": float(best_distance),
+            }
+        )
+
+    return {
+        "recognized": sorted(list(set(recognized))),
+        "unknown_count": unknown_count,
+        "detections": detections,
+    }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

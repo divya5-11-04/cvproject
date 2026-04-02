@@ -117,7 +117,9 @@
                     </h2>
                     <div id="cameraStatus" class="hidden absolute top-14 left-6 right-6 text-sm rounded-md px-3 py-2 bg-red-50 text-red-700 z-10"></div>
                     
+                    <video id="browserVideo" autoplay muted playsinline class="max-h-[400px] w-full object-contain hidden border-2 border-indigo-500 rounded-lg"></video>
                     <img id="videoFeed" src="" alt="Webcam Feed Will Appear Here" class="max-h-[400px] w-full object-contain hidden border-2 border-indigo-500 rounded-lg">
+                    <canvas id="frameCanvas" class="hidden"></canvas>
                     
                     <div id="videoPlaceholder" class="text-center text-gray-400">
                         <i class="fas fa-eye-slash text-6xl mb-4"></i>
@@ -178,6 +180,8 @@
         const btnStartCamera = document.getElementById('btnStartCamera');
         const btnStopCamera = document.getElementById('btnStopCamera');
         const videoFeed = document.getElementById('videoFeed');
+        const browserVideo = document.getElementById('browserVideo');
+        const frameCanvas = document.getElementById('frameCanvas');
         const placeholder = document.getElementById('videoPlaceholder');
         const registerForm = document.getElementById('registerForm');
         const groupPhotoForm = document.getElementById('groupPhotoForm');
@@ -192,6 +196,9 @@
         const apiBaseInput = document.getElementById('apiBaseInput');
         const btnSaveApiBase = document.getElementById('btnSaveApiBase');
         let capturedStudentName = null;
+        let browserStream = null;
+        let scannerTimer = null;
+        const isGitHubPages = window.location.hostname.includes('github.io');
         const defaultApiBase = window.location.hostname.includes('github.io') ? 'http://localhost:8006' : '';
         let apiBase = localStorage.getItem('smartface_api_base') || defaultApiBase;
 
@@ -207,6 +214,61 @@
             apiBaseInput.value = apiBase;
         }
 
+        function sleep(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+        }
+
+        async function ensureBrowserCamera() {
+            if (browserStream) {
+                return browserStream;
+            }
+            browserStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            browserVideo.srcObject = browserStream;
+            await browserVideo.play();
+            return browserStream;
+        }
+
+        function stopBrowserCamera() {
+            if (scannerTimer) {
+                clearInterval(scannerTimer);
+                scannerTimer = null;
+            }
+            if (browserStream) {
+                browserStream.getTracks().forEach((track) => track.stop());
+                browserStream = null;
+            }
+            browserVideo.srcObject = null;
+        }
+
+        async function captureFrameBlob() {
+            const width = browserVideo.videoWidth || 640;
+            const height = browserVideo.videoHeight || 480;
+            frameCanvas.width = width;
+            frameCanvas.height = height;
+            const ctx = frameCanvas.getContext('2d');
+            ctx.drawImage(browserVideo, 0, 0, width, height);
+            return new Promise((resolve) => frameCanvas.toBlob(resolve, 'image/jpeg', 0.9));
+        }
+
+        async function recognizeCurrentFrame() {
+            const blob = await captureFrameBlob();
+            if (!blob) {
+                return;
+            }
+            const formData = new FormData();
+            formData.append('file', blob, 'frame.jpg');
+            const groupName = filterGroup.value.trim();
+            formData.append('group_name', groupName);
+            const response = await fetch(apiUrl('/recognize_frame'), { method: 'POST', body: formData });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.detail || 'Frame recognition failed');
+            }
+            const recognizedText = data.recognized && data.recognized.length ? data.recognized.join(', ') : 'None';
+            showStatus(cameraStatus, `Live recognized: ${recognizedText}`, true);
+            await loadAttendance();
+        }
+
         function showStatus(el, message, success = true) {
             el.textContent = message;
             el.classList.remove('hidden', 'bg-red-50', 'text-red-700', 'bg-green-50', 'text-green-700');
@@ -218,14 +280,32 @@
         }
 
         btnStartCamera.addEventListener('click', async () => {
-            // Point the image stream to the FastAPI backend Video feed generator route
             cameraStatus.classList.add('hidden');
-            const group = encodeURIComponent(filterGroup.value.trim());
-            videoFeed.src = group ? apiUrl(`/video_feed?group_name=${group}`) : apiUrl('/video_feed');
-            videoFeed.classList.remove('hidden');
-            placeholder.classList.add('hidden');
-            btnStartCamera.classList.add('hidden');
-            btnStopCamera.classList.remove('hidden');
+            try {
+                if (isGitHubPages) {
+                    await ensureBrowserCamera();
+                    browserVideo.classList.remove('hidden');
+                    videoFeed.classList.add('hidden');
+                    scannerTimer = setInterval(async () => {
+                        try {
+                            await recognizeCurrentFrame();
+                        } catch (err) {
+                            showStatus(cameraStatus, err.message || 'Live recognition failed', false);
+                        }
+                    }, 1800);
+                } else {
+                    const group = encodeURIComponent(filterGroup.value.trim());
+                    videoFeed.src = group ? apiUrl(`/video_feed?group_name=${group}`) : apiUrl('/video_feed');
+                    videoFeed.classList.remove('hidden');
+                    browserVideo.classList.add('hidden');
+                }
+
+                placeholder.classList.add('hidden');
+                btnStartCamera.classList.add('hidden');
+                btnStopCamera.classList.remove('hidden');
+            } catch (error) {
+                showStatus(cameraStatus, error.message || 'Cannot access camera', false);
+            }
         });
 
         videoFeed.addEventListener('error', () => {
@@ -244,8 +324,10 @@
             } catch (e) {
                 // ignore network cleanup errors
             }
+            stopBrowserCamera();
             videoFeed.src = ""; // Stop stream
             videoFeed.classList.add('hidden');
+            browserVideo.classList.add('hidden');
             placeholder.classList.remove('hidden');
             btnStartCamera.classList.remove('hidden');
             btnStopCamera.classList.add('hidden');
@@ -298,20 +380,52 @@
                 return;
             }
 
-            showStatus(registerStatus, 'Capturing 8 photos from webcam. Keep your face in frame...', true);
-            const formData = new FormData();
-            formData.append('name', name);
-            formData.append('group_name', groupName);
-            formData.append('shots', '8');
-
             try {
-                const response = await fetch(apiUrl('/register_capture'), { method: 'POST', body: formData });
-                const data = await response.json();
-                if (!response.ok) {
-                    throw new Error(data.detail || 'Webcam registration failed');
+                if (isGitHubPages) {
+                    showStatus(registerStatus, 'Using browser camera to capture 8 photos...', true);
+                    await ensureBrowserCamera();
+                    browserVideo.classList.remove('hidden');
+                    placeholder.classList.add('hidden');
+
+                    let success = 0;
+                    let attempts = 0;
+                    while (success < 8 && attempts < 24) {
+                        attempts += 1;
+                        const blob = await captureFrameBlob();
+                        if (!blob) {
+                            await sleep(350);
+                            continue;
+                        }
+                        const formData = new FormData();
+                        formData.append('name', name);
+                        formData.append('group_name', groupName);
+                        formData.append('file', blob, `capture_${attempts}.jpg`);
+                        const response = await fetch(apiUrl('/register'), { method: 'POST', body: formData });
+                        if (response.ok) {
+                            success += 1;
+                            showStatus(registerStatus, `Captured ${success}/8 photos...`, true);
+                        }
+                        await sleep(400);
+                    }
+                    if (success < 7) {
+                        throw new Error(`Captured only ${success} valid photos. Keep face clear and retry.`);
+                    }
+                    showStatus(registerStatus, `Successfully registered ${name} with ${success} photos.`, true);
+                    capturedStudentName = name;
+                } else {
+                    showStatus(registerStatus, 'Capturing 8 photos from webcam. Keep your face in frame...', true);
+                    const formData = new FormData();
+                    formData.append('name', name);
+                    formData.append('group_name', groupName);
+                    formData.append('shots', '8');
+                    const response = await fetch(apiUrl('/register_capture'), { method: 'POST', body: formData });
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.detail || 'Webcam registration failed');
+                    }
+                    showStatus(registerStatus, data.message || 'Webcam registration complete.', true);
+                    capturedStudentName = name;
                 }
-                showStatus(registerStatus, data.message || 'Webcam registration complete.', true);
-                capturedStudentName = name;
                 await loadAttendance();
             } catch (error) {
                 showStatus(registerStatus, error.message, false);
