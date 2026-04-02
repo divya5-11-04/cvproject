@@ -6,7 +6,6 @@
     <title>SmartFace Attendance</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script defer src="https://unpkg.com/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <style>
         .glass-panel {
             background: rgba(255, 255, 255, 0.92);
@@ -147,6 +146,33 @@
         let browserStream = null;
         let scannerTimer = null;
         let modelsReady = false;
+
+        async function loadFaceApiLibrary() {
+            const sources = [
+                'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js',
+                'https://unpkg.com/face-api.js@0.22.2/dist/face-api.min.js'
+            ];
+
+            for (const src of sources) {
+                try {
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = src;
+                        script.async = true;
+                        script.onload = resolve;
+                        script.onerror = () => reject(new Error(`Failed to load ${src}`));
+                        document.head.appendChild(script);
+                    });
+                    if (window.faceapi) {
+                        return;
+                    }
+                } catch (err) {
+                    // try next source
+                }
+            }
+
+            throw new Error('Unable to load face-api.js from CDNs');
+        }
 
         function showStatus(el, message, success = true) {
             el.textContent = message;
@@ -468,6 +494,7 @@
 
         (async () => {
             try {
+                await loadFaceApiLibrary();
                 await loadModels();
             } catch (err) {
                 modelStatus.textContent = 'Model load failed';
