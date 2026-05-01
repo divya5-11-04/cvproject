@@ -1,6 +1,8 @@
 import os
 import pickle
 import json
+import re
+from typing import Optional, List
 from datetime import datetime
 from pathlib import Path
 
@@ -11,6 +13,7 @@ import pandas as pd
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
+from pydantic import BaseModel
 
 app = FastAPI(title="SmartFace Attendance API")
 
@@ -231,6 +234,97 @@ def mark_attendance(name, group_name: str = ""):
     df = pd.concat([df, new_record], ignore_index=True)
     df.to_csv(log_file, index=False)
     return True
+
+
+def sanitize_filename(name: str) -> str:
+    if not name:
+        return "Unassigned"
+    return re.sub(r"[^A-Za-z0-9_-]+", "_", name.strip())
+
+
+def update_group_attendance_excel(group_name: str, present_names: List[str], timestamp: Optional[datetime] = None):
+    """
+    Update or create an Excel workbook per group. First column is `Name` (student names).
+    Each new attendance mark adds a new column with date-time label and fills 'Present'/'Absent'.
+    """
+    ts = timestamp or datetime.now()
+    col_label = ts.strftime("%Y-%m-%d %H:%M:%S")
+    safe_group = sanitize_filename(group_name or "Unassigned")
+    excel_file = LOGS_PATH / f"Attendance_{safe_group}.xlsx"
+
+    # Build list of students for this group from known_data and students_meta
+    group_key = normalize_text(group_name).lower()
+    group_students = sorted({
+        name
+        for name in set(known_data["names"])
+        if normalize_text(get_student_meta(name).get("group_name", "")).lower() == group_key
+    })
+    if not group_students:
+        # fallback to present names
+        group_students = sorted(set(present_names))
+
+    # Read existing workbook if present
+    if excel_file.exists():
+        try:
+            df = pd.read_excel(excel_file, dtype=str)
+        except Exception:
+            df = pd.DataFrame()
+
+        if df.empty:
+            df = pd.DataFrame([{"Name": s} for s in group_students])
+        else:
+            if "Name" not in df.columns:
+                # ensure Name column exists
+                df.insert(0, "Name", df.index.astype(str))
+
+            # Ensure all group students are present as rows
+            existing = df["Name"].astype(str).tolist()
+            for s in group_students:
+                if s not in existing:
+                    df = pd.concat([df, pd.DataFrame([{"Name": s}])], ignore_index=True)
+    else:
+        df = pd.DataFrame([{"Name": s} for s in group_students])
+
+    # Add or overwrite the timestamp column with Present/Absent
+    df[col_label] = df["Name"].apply(lambda n: "Present" if n in present_names else "Absent")
+
+    # Save workbook (pandas will use openpyxl if available)
+    try:
+        df.to_excel(excel_file, index=False)
+    except Exception:
+        # Last-resort: write CSV if Excel write fails
+        csv_file = LOGS_PATH / f"Attendance_{safe_group}.csv"
+        df.to_csv(csv_file, index=False)
+
+
+class GroupAttendancePayload(BaseModel):
+    group_name: str
+    present: List[str] = []
+    timestamp: Optional[str] = None
+
+
+@app.post("/group_attendance")
+def group_attendance(payload: GroupAttendancePayload):
+    """Accepts a JSON body with `group_name`, `present` list and optional `timestamp` (ISO string).
+    Updates the group's Excel sheet and also marks individual CSV attendance entries.
+    """
+    ts = None
+    if payload.timestamp:
+        try:
+            ts = datetime.fromisoformat(payload.timestamp)
+        except Exception:
+            ts = datetime.now()
+
+    update_group_attendance_excel(payload.group_name, payload.present or [], timestamp=ts)
+
+    # Also mark individual attendance into daily CSVs for compatibility
+    for name in payload.present or []:
+        try:
+            mark_attendance(name, group_name=payload.group_name)
+        except Exception:
+            continue
+
+    return {"status": "ok", "marked": len(payload.present or [])}
 
 
 def maybe_auto_update_student(name, face_encoding, face_crop_bgr, confidence_distance):

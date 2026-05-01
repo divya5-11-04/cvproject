@@ -13,20 +13,39 @@
             border: 1px solid rgba(255, 255, 255, 0.35);
             box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
         }
+        .card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.98));
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 6px 18px rgba(2,6,23,0.08);
+            transition: transform 180ms ease, box-shadow 180ms ease;
+        }
+        .card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(2,6,23,0.12); }
+        .btn { transition: transform 130ms ease, box-shadow 130ms ease; }
+        .btn:active { transform: translateY(1px); }
+        .status-badge { padding: 6px 10px; border-radius: 999px; font-weight:600; }
+        .live-area { background: #000; border-radius: 12px; overflow: hidden; display:flex; align-items:center; justify-content:center }
         body {
             background: radial-gradient(circle at 20% 20%, #dbeafe 0%, #f8fafc 45%, #e2e8f0 100%);
         }
     </style>
+        <script>
+            // SheetJS (XLSX) for client-side Excel generation
+        </script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body class="min-h-screen font-sans text-gray-800">
-    <nav class="bg-sky-700 text-white shadow-lg">
+    <nav class="bg-gradient-to-r from-sky-600 to-indigo-600 text-white shadow">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
-                <div class="flex items-center space-x-3">
-                    <i class="fas fa-camera-retro text-2xl"></i>
-                    <span class="font-bold text-xl tracking-wide">SmartFace Attendance</span>
+                <div class="flex items-center space-x-4">
+                    <div class="p-2 bg-white/10 rounded-md"><i class="fas fa-camera-retro text-2xl"></i></div>
+                    <div>
+                        <div class="font-bold text-xl tracking-wide">SmartFace Attendance</div>
+                        <div class="text-xs opacity-80">Group-wise attendance • Offline-first</div>
+                    </div>
                 </div>
-                <div id="modelStatus" class="text-sm bg-sky-900/60 px-3 py-1 rounded-full">Loading AI models...</div>
+                <div id="modelStatus" class="status-badge bg-white/10 text-white">Loading AI models...</div>
             </div>
         </div>
     </nav>
@@ -34,7 +53,7 @@
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div class="space-y-6">
-                <div class="glass-panel rounded-2xl p-6">
+                <div class="card rounded-2xl p-6">
                     <h2 class="text-xl font-bold mb-4 flex items-center text-sky-700">
                         <i class="fas fa-user-plus mr-2"></i> Register Student
                     </h2>
@@ -54,20 +73,23 @@
                         </div>
                         <p class="text-xs text-gray-500">You can upload one image or capture 8 photos from camera.</p>
                         <div class="flex space-x-2">
-                            <button type="button" id="btnCaptureRegister" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Capture 8 Photos</button>
-                            <button type="submit" class="flex-1 bg-sky-700 hover:bg-sky-800 text-white font-bold py-2 px-4 rounded">Register</button>
+                            <button type="button" id="btnCaptureRegister" class="flex-1 btn bg-gradient-to-r from-blue-600 to-sky-600 hover:opacity-95 text-white font-semibold py-2 px-4 rounded-lg"> <i class="fas fa-camera mr-2"></i>Capture 8</button>
+                            <button type="submit" class="flex-1 btn bg-gradient-to-r from-sky-700 to-indigo-700 hover:opacity-95 text-white font-semibold py-2 px-4 rounded-lg"> <i class="fas fa-check mr-2"></i>Register</button>
                         </div>
                     </form>
                 </div>
 
-                <div class="glass-panel rounded-2xl p-6">
+                <div class="card rounded-2xl p-6">
                     <h2 class="text-xl font-bold mb-4 flex items-center text-emerald-700">
                         <i class="fas fa-users mr-2"></i> Group Attendance
                     </h2>
                     <div id="groupStatus" class="hidden mb-3 text-sm rounded-md px-3 py-2"></div>
                     <form id="groupPhotoForm" class="space-y-4">
-                        <input type="text" id="groupScopeName" placeholder="Group for this photo (optional, e.g. G1)" class="block w-full rounded-md border-gray-300 shadow-sm p-2 border">
-                        <input type="file" id="groupPhoto" accept="image/*" required class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100">
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="groupScopeName" placeholder="Group for this photo (required for group sheet)" class="block w-full rounded-md border-gray-200 shadow-sm p-2 border">
+                            <button id="btnDownloadGroup" type="button" class="ml-2 btn bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-3 rounded-lg">Download</button>
+                        </div>
+                        <input type="file" id="groupPhoto" accept="image/*" required class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 mt-3">
                         <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded">Process Classroom Photo</button>
                     </form>
                     <img id="processedPreview" class="mt-4 rounded-lg border border-gray-200 hidden" alt="Processed attendance preview" />
@@ -75,36 +97,44 @@
             </div>
 
             <div class="lg:col-span-2 space-y-6">
-                <div class="glass-panel rounded-2xl p-6 flex flex-col items-center justify-center min-h-[400px] relative overflow-hidden bg-black">
+                <div class="card rounded-2xl p-6 flex flex-col items-center justify-center min-h-[420px] relative overflow-hidden live-area">
                     <h2 class="absolute top-4 left-6 text-xl font-bold text-white z-10 flex items-center drop-shadow-md">
                         <i class="fas fa-video mr-2 text-red-500"></i> Live Scanner
                     </h2>
                     <div id="cameraStatus" class="hidden absolute top-14 left-6 right-6 text-sm rounded-md px-3 py-2 z-10"></div>
-                    <div id="liveWrap" class="hidden relative max-h-[400px] max-w-full">
-                        <video id="browserVideo" autoplay muted playsinline class="max-h-[400px] max-w-full border-2 border-sky-500 rounded-lg"></video>
-                        <canvas id="liveOverlay" class="absolute inset-0 pointer-events-none"></canvas>
+                    <div id="liveWrap" class="hidden relative w-full">
+                        <div class="w-full max-w-4xl mx-auto" style="aspect-ratio:16/9">
+                            <video id="browserVideo" autoplay muted playsinline class="w-full h-full object-cover rounded-md border-2 border-sky-600"></video>
+                            <canvas id="liveOverlay" class="absolute inset-0 pointer-events-none"></canvas>
+                        </div>
                     </div>
-                    <div id="videoPlaceholder" class="text-center text-gray-400">
+                    <div id="videoPlaceholder" class="text-center text-gray-300">
                         <i class="fas fa-eye-slash text-6xl mb-4"></i>
-                        <p>Camera is currently offline</p>
+                        <p>Camera is currently offline — start the scanner to begin.</p>
                     </div>
                     <div class="absolute bottom-4 flex space-x-4 z-10">
-                        <button id="btnStartCamera" class="bg-sky-700 hover:bg-sky-800 text-white font-bold py-2 px-6 rounded-full shadow-lg">Start Scanner</button>
-                        <button id="btnStopCamera" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-full shadow-lg hidden">Stop Scanner</button>
+                        <button id="btnStartCamera" class="btn bg-gradient-to-r from-emerald-500 to-sky-600 hover:opacity-95 text-white font-semibold py-2 px-6 rounded-full shadow">Start</button>
+                        <button id="btnStopCamera" class="btn bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-full shadow hidden">Stop</button>
                     </div>
                 </div>
 
-                <div class="glass-panel rounded-2xl p-6">
+                <div class="card rounded-2xl p-6">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-xl font-bold flex items-center text-gray-800">
                             <i class="fas fa-clipboard-list mr-2 text-sky-700"></i> Today's Attendance
                         </h2>
-                        <button id="btnRefreshLog" class="text-sky-700 hover:text-sky-900"><i class="fas fa-sync-alt"></i> Refresh</button>
+                        <div class="flex items-center space-x-3">
+                            <button id="btnRefreshLog" class="text-sky-700 hover:text-sky-900"><i class="fas fa-sync-alt"></i> Refresh</button>
+                            <select id="groupViewerSelect" class="rounded-md border-gray-200 p-2 text-sm">
+                                <option value="">-- View Group Attendance --</option>
+                            </select>
+                            <button id="btnViewGroup" class="btn bg-amber-500 text-white px-3 py-1 rounded-md">View</button>
+                        </div>
                     </div>
                     <input type="text" id="filterGroup" placeholder="Filter by group" class="block w-full rounded-md border-gray-300 shadow-sm p-2 border mb-4">
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
+                            <thead class="bg-white">
                                 <tr>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Group</th>
@@ -112,10 +142,14 @@
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                 </tr>
                             </thead>
-                            <tbody id="attendanceTableBody" class="bg-white divide-y divide-gray-200">
+                            <tbody id="attendanceTableBody" class="bg-white divide-y divide-gray-100">
                                 <tr><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" colspan="4">No records yet for today.</td></tr>
                             </tbody>
                         </table>
+                    </div>
+                    <div id="groupAttendanceContainer" class="mt-6 hidden">
+                        <h3 class="text-lg font-semibold mb-3">Group Attendance Sheet</h3>
+                        <div id="groupSheetWrap" class="overflow-auto bg-white rounded-md border p-3"></div>
                     </div>
                 </div>
             </div>
@@ -126,6 +160,7 @@
         const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
         const STUDENTS_KEY = 'smartface_students_v2';
         const ATT_PREFIX = 'smartface_attendance_';
+        const GROUP_ATT_PREFIX = 'smartface_group_attendance_';
         const FACE_THRESHOLD = 0.52;
 
         const btnStartCamera = document.getElementById('btnStartCamera');
@@ -225,6 +260,149 @@
                 records.push({ Name: name, Group: group || '', Time: new Date().toLocaleTimeString() });
                 saveAttendance(records);
             }
+        }
+
+        function safeGroupKey(name) {
+            if (!name) return 'Unassigned';
+            return name.trim().replace(/[^A-Za-z0-9_-]+/g, '_');
+        }
+
+        function groupStorageKey(groupName) {
+            return GROUP_ATT_PREFIX + safeGroupKey(groupName || 'Unassigned');
+        }
+
+        function loadGroupAttendance(groupName) {
+            const key = groupStorageKey(groupName);
+            const data = localStorage.getItem(key);
+            return data ? JSON.parse(data) : { rows: [] , timestamps: [] };
+        }
+
+        function saveGroupAttendance(groupName, obj) {
+            const key = groupStorageKey(groupName);
+            localStorage.setItem(key, JSON.stringify(obj));
+        }
+
+        function updateGroupAttendanceLocal(groupName, presentNames, timestamp) {
+            const ts = timestamp || new Date().toISOString();
+            const state = loadGroupAttendance(groupName);
+
+            // ensure rows include all students known in group
+            const existingNames = state.rows.map(r => r.Name);
+            presentNames.forEach(n => { if (!existingNames.includes(n)) existingNames.push(n); });
+
+            // add any known students from student list of same group
+            const students = getStudents().filter(s => (s.group||'').toLowerCase() === (groupName||'').toLowerCase());
+            students.forEach(s => { if (!existingNames.includes(s.name)) existingNames.push(s.name); });
+
+            // re-build rows map
+            const rowsMap = {};
+            state.rows.forEach(r => { rowsMap[r.Name] = Object.assign({}, r); });
+            existingNames.forEach(n => { rowsMap[n] = rowsMap[n] || { Name: n }; });
+
+            // append timestamp column and fill Present/Absent
+            state.timestamps = state.timestamps || [];
+            if (!state.timestamps.includes(ts)) state.timestamps.push(ts);
+            state.timestamps.sort();
+
+            // set values for this timestamp
+            Object.keys(rowsMap).forEach(n => {
+                const present = presentNames.includes(n) ? 'Present' : 'Absent';
+                rowsMap[n][ts] = present;
+            });
+
+            // convert back to rows array preserving order
+            state.rows = Object.keys(rowsMap).sort().map(n => rowsMap[n]);
+            saveGroupAttendance(groupName, state);
+        }
+
+        function downloadGroupExcel(groupName) {
+            const state = loadGroupAttendance(groupName);
+            if (!state.rows.length) {
+                showStatus(groupStatus, 'No attendance data for this group.', false);
+                return;
+            }
+            // Build worksheet data: header row
+            const header = ['Name'].concat(state.timestamps);
+            const data = [header];
+            state.rows.forEach(r => {
+                const row = [r.Name].concat(state.timestamps.map(ts => r[ts] || 'Absent'));
+                data.push(row);
+            });
+
+            // Use SheetJS to generate workbook
+            try {
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet(data);
+                XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
+                const safeName = safeGroupKey(groupName || 'Unassigned');
+                XLSX.writeFile(wb, `Attendance_${safeName}.xlsx`);
+            } catch (err) {
+                showStatus(groupStatus, `Failed to generate Excel: ${err.message}`, false);
+            }
+        }
+
+        function getAllSavedGroups() {
+            const groups = new Set();
+            // from students list
+            getStudents().forEach(s => { if (s.group) groups.add(s.group); });
+            // from localStorage keys
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.startsWith(GROUP_ATT_PREFIX)) {
+                    const g = k.slice(GROUP_ATT_PREFIX.length).replace(/_/g, ' ');
+                    groups.add(g);
+                }
+            }
+            return Array.from(groups).sort((a,b)=> a.localeCompare(b));
+        }
+
+        function populateGroupSelector() {
+            const sel = document.getElementById('groupViewerSelect');
+            const prev = sel.value;
+            sel.innerHTML = '<option value="">-- View Group Attendance --</option>';
+            const groups = getAllSavedGroups();
+            groups.forEach(g => {
+                const opt = document.createElement('option');
+                opt.value = g;
+                opt.textContent = g;
+                sel.appendChild(opt);
+            });
+            if (groups.includes(prev)) sel.value = prev;
+        }
+
+        function renderGroupAttendance(groupName) {
+            const container = document.getElementById('groupAttendanceContainer');
+            const wrap = document.getElementById('groupSheetWrap');
+            wrap.innerHTML = '';
+            if (!groupName) { container.classList.add('hidden'); return; }
+            const state = loadGroupAttendance(groupName);
+            if (!state || !state.rows || !state.rows.length) {
+                wrap.innerHTML = '<div class="text-sm text-gray-600">No records for this group yet.</div>';
+                container.classList.remove('hidden');
+                return;
+            }
+            // create table
+            const table = document.createElement('table');
+            table.className = 'min-w-full border-collapse';
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            headerRow.innerHTML = `<th class="px-3 py-2 text-left font-semibold">Name</th>` + state.timestamps.map(ts => `<th class="px-3 py-2 text-left font-semibold">${ts}</th>`).join('');
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+            const tbody = document.createElement('tbody');
+            state.rows.forEach(r => {
+                const tr = document.createElement('tr');
+                const nameTd = document.createElement('td'); nameTd.className='px-3 py-2'; nameTd.textContent = r.Name || '';
+                tr.appendChild(nameTd);
+                state.timestamps.forEach(ts => {
+                    const td = document.createElement('td'); td.className='px-3 py-2'; td.textContent = r[ts] || 'Absent';
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+            wrap.appendChild(table);
+            container.classList.remove('hidden');
         }
 
         function renderAttendance() {
@@ -528,11 +706,38 @@
             processedPreview.classList.remove('hidden');
             showStatus(groupStatus, `Processed. Recognized: ${recognized.length ? [...new Set(recognized)].join(', ') : 'None'}. Unknown: ${unknown}.`, true);
             renderAttendance();
+            // Update local per-group attendance store and allow download
+            try {
+                const presentUnique = [...new Set(recognized)];
+                updateGroupAttendanceLocal(groupFilter || '', presentUnique, new Date().toISOString());
+                if (presentUnique.length) showStatus(groupStatus, `Local group attendance updated (${presentUnique.length}).`, true);
+            } catch (err) {
+                showStatus(groupStatus, `Failed updating local group data: ${err.message}`, false);
+            }
             URL.revokeObjectURL(img.src);
         });
 
         btnRefreshLog.addEventListener('click', renderAttendance);
         filterGroup.addEventListener('input', renderAttendance);
+        document.getElementById('btnDownloadGroup').addEventListener('click', () => {
+            const group = document.getElementById('groupScopeName').value.trim();
+            if (!group) {
+                showStatus(groupStatus, 'Enter a group name to download its sheet.', false);
+                return;
+            }
+            downloadGroupExcel(group);
+        });
+        document.getElementById('btnViewGroup').addEventListener('click', () => {
+            const group = document.getElementById('groupViewerSelect').value;
+            if (!group) {
+                showStatus(groupStatus, 'Select a group to view.', false);
+                return;
+            }
+            renderGroupAttendance(group);
+        });
+
+        // populate on load
+        populateGroupSelector();
         window.addEventListener('resize', syncOverlaySize);
 
         (async () => {
