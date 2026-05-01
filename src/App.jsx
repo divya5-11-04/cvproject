@@ -833,25 +833,6 @@ function App() {
         </div>
       </header>
 
-      <section className="stats-strip">
-        <article className="stat-card">
-          <p className="stat-label">Registered Students</p>
-          <h3 className="stat-value">{students.length}</h3>
-        </article>
-        <article className="stat-card">
-          <p className="stat-label">Known Groups</p>
-          <h3 className="stat-value">{knownGroups.length}</h3>
-        </article>
-        <article className="stat-card">
-          <p className="stat-label">Present Today</p>
-          <h3 className="stat-value">{uniquePresentToday}</h3>
-        </article>
-        <article className="stat-card">
-          <p className="stat-label">Matrix Columns</p>
-          <h3 className="stat-value">{selectedGroupSheet?.timestamps?.length || 0}</h3>
-        </article>
-      </section>
-
       <main className="layout">
         <section className="column-left">
           <article className="card card-register">
@@ -862,7 +843,7 @@ function App() {
             <form onSubmit={handleRegisterSubmit} className="stack">
               <label>
                 Student Name
-                <input value={studentName} onChange={(e) => setStudentName(e.target.value)} placeholder="e.g. Hrmnn._.Sidhu" required />
+                <input value={studentName} onChange={(e) => setStudentName(e.target.value)} placeholder="e.g. (Divya)" required />
               </label>
 
               <label>
