@@ -609,8 +609,15 @@ function App() {
     }
 
     const name = studentName.trim()
-    if (!name || !studentPhoto) {
-      setRegisterStatus('Enter name and upload one clear photo.')
+    if (!name) {
+      setRegisterStatus('Enter name before registration.')
+      return
+    }
+
+    // If no uploaded photo, use the camera capture flow (Capture 8 samples)
+    if (!studentPhoto) {
+      // captureEightSamples will handle camera start, descriptor capture and registration
+      await captureEightSamples()
       return
     }
 
@@ -857,7 +864,6 @@ function App() {
                   type="file"
                   accept="image/*"
                   onChange={(e) => setStudentPhoto(e.target.files?.[0] || null)}
-                  required
                 />
               </label>
 
